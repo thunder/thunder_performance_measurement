@@ -1,0 +1,13 @@
+<?php
+
+/**
+ * @file
+ * Contains hooks for Thunder performance measurement module.
+ */
+
+/**
+ * Implements hook_page_attachments().
+ */
+function thunder_performance_measurement_page_attachments(array &$attachments) {
+  $attachments['#attached']['library'][] = 'thunder_performance_measurement/elastic_apm_rum';
+}

@@ -1,0 +1,5 @@
+
+elastic_apm_rum:
+  js:
+    js/elastic-apm-js-base.umd.min.js: {}
+    js/elastic-apm-rum-init.js: {}
