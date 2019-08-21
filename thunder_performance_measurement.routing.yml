@@ -1,0 +1,9 @@
+
+thunder_performance_measurement.site_info_controller_siteInfo:
+  path: '/thunder-performance-measurement/site-info'
+  defaults:
+    _controller: '\Drupal\thunder_performance_measurement\Controller\SiteInfoController::siteInfo'
+    _title: 'Get content type bundle information by some rule'
+  methods: [GET]
+  requirements:
+    _access: 'TRUE'
