@@ -6,4 +6,4 @@ thunder_performance_measurement.site_info_controller_siteInfo:
     _title: 'Get content type bundle information by some rule'
   methods: [GET]
   requirements:
-    _access: 'TRUE'
+    _permission: 'access thunder_performance_measurement site_info'
