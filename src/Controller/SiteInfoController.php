@@ -170,6 +170,16 @@ class SiteInfoController extends ControllerBase {
     $rule = $request->query->get('rule', 'count');
     $index = (int) $request->query->get('index', '0');
 
+    // Validate request params.
+    if (!in_array($rule, ['count', 'number_of_fields'])) {
+      return new JsonResponse(
+        [
+          'message' => $this->t('Unsupported rule option.'),
+        ],
+        400
+      );
+    }
+
     $data = (array) $this->cache()
       ->get('thunder-performance-measurement:site-info:node');
     if (!isset($data['data'])) {
@@ -185,18 +195,22 @@ class SiteInfoController extends ControllerBase {
       $data = $data['data'];
     }
 
-    $top_bundle = array_keys($data['bundles_by_count'])[$index];
-    if ($rule === 'number_of_fields') {
-      $top_bundle = array_keys($data['bundles_by_number_of_fields'])[$index];
+    $bundles = array_keys($data["bundles_by_{$rule}"]);
+    // Unsure that index is not out-of-bounds.
+    if (count($bundles) <= $index) {
+      return new JsonResponse(
+        [
+          'message' => $this->t('Index out of bounds.'),
+        ],
+        400
+      );
     }
 
-    $return_data = [
-      'bundle' => $top_bundle,
-      'required_fields' => $this->getRequiredFieldWidgets('node', $top_bundle),
-    ];
-
     return new JsonResponse([
-      'data' => $return_data,
+      'data' => [
+        'bundle' => $bundles[$index],
+        'required_fields' => $this->getRequiredFieldWidgets('node', $bundles[$index]),
+      ],
     ]);
   }
 
