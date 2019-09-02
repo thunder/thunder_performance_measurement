@@ -199,9 +199,9 @@ class SiteInfoController extends ControllerBase {
       $data = $data['data'];
     }
 
-    $bundles = array_keys($data['bundles_by'][$rule]);
+    $bundles_by_rule = array_keys($data['bundles_by'][$rule]);
     // Unsure that index is not out-of-bounds.
-    if (count($bundles) <= $index) {
+    if (count($bundles_by_rule) <= $index) {
       return new JsonResponse(
         [
           'message' => $this->t('Index out of bounds.'),
@@ -212,8 +212,8 @@ class SiteInfoController extends ControllerBase {
 
     return new JsonResponse([
       'data' => [
-        'bundle' => $bundles[$index],
-        'required_fields' => $this->getRequiredFieldWidgets('node', $bundles[$index]),
+        'bundle' => $bundles_by_rule[$index],
+        'required_fields' => $this->getRequiredFieldWidgets('node', $bundles_by_rule[$index]),
       ],
     ]);
   }
