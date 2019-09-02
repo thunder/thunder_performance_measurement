@@ -185,8 +185,12 @@ class SiteInfoController extends ControllerBase {
     if (!isset($data['data'])) {
       $this->samplerMapping->enableMapping(FALSE);
       $data = $this->samplerPluginManager->createInstance('bundle:node')->collect();
-      $data['bundles_by_count'] = $this->getBundlesByCount($data);
-      $data['bundles_by_number_of_fields'] = $this->getBundlesByNumberOfFields($data);
+
+      $bundles_by = [
+        'count' => $this->getBundlesByCount($data),
+        'number_of_fields' => $this->getBundlesByNumberOfFields($data),
+      ];
+      $data['bundles_by'] = $bundles_by;
 
       $this->cache()
         ->set('thunder-performance-measurement:site-info:node', $data);
@@ -195,7 +199,7 @@ class SiteInfoController extends ControllerBase {
       $data = $data['data'];
     }
 
-    $bundles = array_keys($data["bundles_by_{$rule}"]);
+    $bundles = array_keys($data['bundles_by'][$rule]);
     // Unsure that index is not out-of-bounds.
     if (count($bundles) <= $index) {
       return new JsonResponse(
