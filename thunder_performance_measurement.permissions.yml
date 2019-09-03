@@ -1,0 +1,3 @@
+access thunder_performance_measurement site_info:
+  title: 'Thunder testing performance measurement site info endpoint access'
+  description: 'NOTE: Only for testing purposes. Do not use this on production!'
