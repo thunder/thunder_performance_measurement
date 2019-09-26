@@ -48,7 +48,8 @@
   });
 
   window.apm.addTags({
-    branch: getCookie('branchTag')
+    branch: getCookie('branchTag'),
+    test: getCookie('testTag')
   });
 
   window.elasticApm.addFilter(function (payload) {
@@ -61,7 +62,20 @@
       return payload;
     }
 
+    // Keep browser transactions connected to NightwatchJS Test transactions.
     payload.transactions[0].parent_id = spanId;
+
+    // Set context information on every span.
+    payload.transactions.forEach(function (transaction) {
+      transaction.spans.forEach(function (span) {
+        span.context = span.context || {};
+        span.context.tags = span.context.tags || {};
+
+        // Add branch name and test name to span context tags.
+        span.context.tags.branch = getCookie('branchTag');
+        span.context.tags.test = getCookie('testTag');
+      });
+    });
 
     return payload;
   });
