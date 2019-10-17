@@ -83,4 +83,215 @@ class SiteInfoControllerTest extends KernelTestBase {
     $this->assertEqual($result, ['bundle_0' => 3, 'bundle_1' => 1]);
   }
 
+  /**
+   * Data provider for testGetTargetTypeBundleDistribution().
+   */
+  public function providerGetTargetTypeBundleDistribution() {
+    $target_entity_field_widgets_data = [
+      'target_bundle_text' => [
+        'field_text' => [
+          'type' => 'text_textarea',
+        ],
+      ],
+      'target_bundle_image' => [
+        'field_image' => [
+          'type' => 'entity_browser_entity_reference',
+        ],
+        'field_description' => [
+          'type' => 'text_textarea',
+        ],
+      ],
+      'target_bundle_link' => [
+        'field_media' => [
+          'type' => 'inline_entity_form_simple',
+        ],
+      ],
+    ];
+
+    return [
+      // In case of single instance, the full list of target entity type bundles
+      // should be returned.
+      [
+        [
+          'target_bundle_text' => 6,
+          'target_bundle_image' => 2,
+          'target_bundle_link' => 2,
+        ],
+        1,
+        $target_entity_field_widgets_data,
+        [
+          'target_bundle_text' => [
+            'instances' => 6,
+            'fields' => [
+              'field_text' => [
+                'type' => 'text_textarea',
+              ],
+            ],
+          ],
+          'target_bundle_image' => [
+            'instances' => 2,
+            'fields' => [
+              'field_image' => [
+                'type' => 'entity_browser_entity_reference',
+              ],
+              'field_description' => [
+                'type' => 'text_textarea',
+              ],
+            ],
+          ],
+          'target_bundle_link' => [
+            'instances' => 2,
+            'fields' => [
+              'field_media' => [
+                'type' => 'inline_entity_form_simple',
+              ],
+            ],
+          ],
+        ],
+      ],
+      // Only used target bundles should be returned.
+      [
+        [
+          'target_bundle_text' => 6,
+          'target_bundle_link' => 2,
+        ],
+        1,
+        $target_entity_field_widgets_data,
+        [
+          'target_bundle_text' => [
+            'instances' => 6,
+            'fields' => [
+              'field_text' => [
+                'type' => 'text_textarea',
+              ],
+            ],
+          ],
+          'target_bundle_link' => [
+            'instances' => 2,
+            'fields' => [
+              'field_media' => [
+                'type' => 'inline_entity_form_simple',
+              ],
+            ],
+          ],
+        ],
+      ],
+      // For two instances, number of instances for target entity bundles
+      // should be half.
+      [
+        [
+          'target_bundle_text' => 6,
+          'target_bundle_image' => 2,
+          'target_bundle_link' => 2,
+        ],
+        2,
+        $target_entity_field_widgets_data,
+        [
+          'target_bundle_text' => [
+            'instances' => 3,
+            'fields' => [
+              'field_text' => [
+                'type' => 'text_textarea',
+              ],
+            ],
+          ],
+          'target_bundle_image' => [
+            'instances' => 1,
+            'fields' => [
+              'field_image' => [
+                'type' => 'entity_browser_entity_reference',
+              ],
+              'field_description' => [
+                'type' => 'text_textarea',
+              ],
+            ],
+          ],
+          'target_bundle_link' => [
+            'instances' => 1,
+            'fields' => [
+              'field_media' => [
+                'type' => 'inline_entity_form_simple',
+              ],
+            ],
+          ],
+        ],
+      ],
+      // For rarely filled field we should have most used bundle in list of
+      // target entity type bundles.
+      [
+        [
+          'target_bundle_text' => 6,
+          'target_bundle_image' => 2,
+          'target_bundle_link' => 2,
+        ],
+        50,
+        $target_entity_field_widgets_data,
+        [
+          'target_bundle_text' => [
+            'instances' => 1,
+            'fields' => [
+              'field_text' => [
+                'type' => 'text_textarea',
+              ],
+            ],
+          ],
+        ],
+      ],
+      // In case of limited.
+      [
+        [
+          'target_bundle_text' => 80,
+          'target_bundle_link' => 20,
+          'target_bundle_image' => 1,
+        ],
+        20,
+        $target_entity_field_widgets_data,
+        [
+          'target_bundle_text' => [
+            'instances' => 4,
+            'fields' => [
+              'field_text' => [
+                'type' => 'text_textarea',
+              ],
+            ],
+          ],
+          'target_bundle_link' => [
+            'instances' => 1,
+            'fields' => [
+              'field_media' => [
+                'type' => 'inline_entity_form_simple',
+              ],
+            ],
+          ],
+        ],
+      ],
+    ];
+  }
+
+  /**
+   * Tests sorting of bundles by number of fields.
+   *
+   * @covers ::getTargetTypeBundleDistribution
+   *
+   * @dataProvider providerGetTargetTypeBundleDistribution
+   */
+  public function testGetTargetTypeBundleDistribution($target_type_histogram, $bundle_instances, $target_entity_field_widgets_data, $expected_result) {
+    $controller = SiteInfoController::create($this->container);
+
+    $controller_class = new ReflectionClass(get_class($controller));
+    $get_target_type_bundle_distribution = $controller_class->getMethod('getTargetTypeBundleDistribution');
+    $get_target_type_bundle_distribution->setAccessible(TRUE);
+
+    $result = $get_target_type_bundle_distribution->invokeArgs($controller, [
+      $target_type_histogram,
+      $bundle_instances,
+      $target_entity_field_widgets_data,
+    ]);
+
+    $this->assertEqual(
+      $result,
+      $expected_result
+    );
+  }
+
 }

@@ -107,7 +107,11 @@ class SiteInfoController extends ControllerBase {
 
         // Add target type distribution.
         if ($field_info['type'] == 'entity_reference_revisions' || $field_info['type'] == 'entity_reference') {
-          $collection[$field_name]['target_type_distribution'] = $this->getTargetTypeBundleDistribution($field_info, $bundle_instances, $threshold);
+          $collection[$field_name]['target_type_distribution'] = $this->getTargetTypeBundleDistribution(
+            $field_info['target_type_histogram'],
+            $bundle_instances,
+            $this->getTargetEntityFieldWidgets($field_info['target_type'], $threshold)
+          );
         }
 
         return $collection;
@@ -121,20 +125,17 @@ class SiteInfoController extends ControllerBase {
   /**
    * Get distribution of target entity type bundles for reference field.
    *
-   * @param array $field_info
-   *   Gathered field information by sampler plugin.
+   * @param array $target_type_histogram
+   *   The histogram for target entity type.
    * @param int $bundle_instances
    *   Number of bundle instances.
-   * @param float $threshold
-   *   The threshold in percents for non-required fields.
+   * @param array $target_entity_type_bundle_fields
+   *   The list of bundles with fields for target entity type.
    *
    * @return array
    *   Returns distribution of target entity bundles with required fields.
    */
-  protected function getTargetTypeBundleDistribution(array $field_info, $bundle_instances, $threshold = 100.0) {
-    $target_entity_type = $field_info['target_type'];
-    $target_type_histogram = $field_info['target_type_histogram'];
-
+  protected function getTargetTypeBundleDistribution(array $target_type_histogram, $bundle_instances, array $target_entity_type_bundle_fields) {
     $total_target_instances = array_sum($target_type_histogram);
     $target_types_per_instance = $bundle_instances === 0 ? 0 : $total_target_instances / $bundle_instances;
 
@@ -143,9 +144,6 @@ class SiteInfoController extends ControllerBase {
 
       return floor($value) != 0 ? floor($value) : ceil($value);
     }, $target_type_histogram);
-
-    // Get fields for target bundles.
-    $target_entity_type_bundle_fields = $this->getTargetEntityFieldWidgets($target_entity_type, $threshold);
 
     // Fill target bundles for the field.
     $target_type_instances = [];
@@ -201,7 +199,7 @@ class SiteInfoController extends ControllerBase {
         continue;
       }
 
-      $form_display_widgets = array_filter(
+      $target_bundle_info = array_filter(
         $entity_form_display->getComponents(),
         function ($field_display_info, $field_name) use ($target_bundle_info, $target_bundle_instances, $threshold) {
           // Skip fields that are not displayed on form.
@@ -226,8 +224,6 @@ class SiteInfoController extends ControllerBase {
         },
         ARRAY_FILTER_USE_BOTH
       );
-
-      $target_bundle_info = $form_display_widgets;
     }
 
     return $target_entity_type_bundle_fields;
@@ -279,6 +275,39 @@ class SiteInfoController extends ControllerBase {
   }
 
   /**
+   * Get data collected by sampler plugin with additional ordering information.
+   *
+   * @param string $entity_type
+   *   The entity type.
+   *
+   * @return array
+   *   Returns enriched collected data.
+   *
+   * @throws \Drupal\Component\Plugin\Exception\PluginException
+   */
+  protected function getDataForEntityType($entity_type) {
+    $data = (array) $this->cache()
+      ->get("thunder-performance-measurement:site-info:{$entity_type}");
+    if (!isset($data['data'])) {
+      $data = $this->samplerPluginManager->createInstance("reference_fields_target_bundles:{$entity_type}")->collect();
+
+      $bundles_by = [
+        'count' => $this->getBundlesByCount($data),
+        'number_of_fields' => $this->getBundlesByNumberOfFields($data),
+      ];
+      $data['bundles_by'] = $bundles_by;
+
+      $this->cache()
+        ->set("thunder-performance-measurement:site-info:{$entity_type}", $data);
+    }
+    else {
+      $data = $data['data'];
+    }
+
+    return $data;
+  }
+
+  /**
    * Gets site information.
    *
    * Allowed query options are following:
@@ -316,23 +345,7 @@ class SiteInfoController extends ControllerBase {
     // Any sampler calls now on should be without mapping.
     $this->samplerMapping->enableMapping(FALSE);
 
-    $data = (array) $this->cache()
-      ->get('thunder-performance-measurement:site-info:node');
-    if (!isset($data['data'])) {
-      $data = $this->samplerPluginManager->createInstance('reference_fields_target_bundles:node')->collect();
-
-      $bundles_by = [
-        'count' => $this->getBundlesByCount($data),
-        'number_of_fields' => $this->getBundlesByNumberOfFields($data),
-      ];
-      $data['bundles_by'] = $bundles_by;
-
-      $this->cache()
-        ->set('thunder-performance-measurement:site-info:node', $data);
-    }
-    else {
-      $data = $data['data'];
-    }
+    $data = $this->getDataForEntityType('node');
 
     $bundles_by_rule = array_keys($data['bundles_by'][$rule]);
     // Unsure that index is not out-of-bounds.
