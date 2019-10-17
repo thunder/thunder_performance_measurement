@@ -237,7 +237,7 @@ class SiteInfoControllerTest extends KernelTestBase {
           ],
         ],
       ],
-      // In case of limited.
+      // In case of histogram where some bundles are starting to drop off.
       [
         [
           'target_bundle_text' => 80,
