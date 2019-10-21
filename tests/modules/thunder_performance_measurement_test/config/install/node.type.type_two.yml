@@ -1,9 +1,9 @@
 langcode: en
 status: true
 third_party_settings: {}
-name: 'First node type'
-type: type_one
-description: 'First node type'
+name: 'Second node type'
+type: type_two
+description: 'Second node type'
 help: ''
 new_revision: true
 preview_mode: 1

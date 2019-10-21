@@ -349,7 +349,7 @@ class SiteInfoController extends ControllerBase {
 
     $bundles_by_rule = array_keys($data['bundles_by'][$rule]);
     // Unsure that index is not out-of-bounds.
-    if (count($bundles_by_rule) <= $index) {
+    if ($index < 0 || count($bundles_by_rule) <= $index) {
       return new JsonResponse(
         [
           'message' => $this->t('Index out of bounds.'),

@@ -2,15 +2,15 @@ langcode: en
 status: true
 dependencies:
   config:
-    - field.storage.node.field_paragraphs
+    - field.storage.node.paragraphs
     - node.type.type_one
     - paragraphs.paragraphs_type.one
-    - paragraphs.paragraphs_type.two
     - paragraphs.paragraphs_type.three
+    - paragraphs.paragraphs_type.two
   module:
     - entity_reference_revisions
-id: node.type_one.field_paragraphs
-field_name: field_paragraphs
+id: node.type_one.paragraphs
+field_name: paragraphs
 entity_type: node
 bundle: type_one
 label: 'Paragraphs'
