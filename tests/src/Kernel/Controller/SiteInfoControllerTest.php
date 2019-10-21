@@ -314,18 +314,14 @@ class SiteInfoControllerTest extends ThunderPerformanceMeasurementTestBase {
     $result = $controller->siteInfo(new Request(['rule' => 'count', 'index' => '0']));
     $this->assertEqual($result->getStatusCode(), 200);
     $json_result_count_index_0 = json_decode($result->getContent(), TRUE);
-    $this->assertEqual($json_result_count_index_0['data'], [
-      'bundle' => 'type_one',
-      'required_fields' => [],
-    ]);
+    $this->assertEqual($json_result_count_index_0['data']['bundle'], 'type_one');
+    $this->assertArrayHasKey('title', $json_result_count_index_0['data']['required_fields']);
 
     $result = $controller->siteInfo(new Request(['rule' => 'number_of_fields', 'index' => '1']));
     $this->assertEqual($result->getStatusCode(), 200);
     $json_result_number_of_fields_index_1 = json_decode($result->getContent(), TRUE);
-    $this->assertEqual($json_result_number_of_fields_index_1['data'], [
-      'bundle' => 'type_two',
-      'required_fields' => [],
-    ]);
+    $this->assertEqual($json_result_number_of_fields_index_1['data']['bundle'], 'type_two');
+    $this->assertArrayHasKey('title', $json_result_number_of_fields_index_1['data']['required_fields']);
 
     // Test threshold where all displayed fields are available.
     // (rule = count, index = 0)
@@ -339,16 +335,16 @@ class SiteInfoControllerTest extends ThunderPerformanceMeasurementTestBase {
     // Test threshold for 30% filled fields. (rule = count, index = 0)
     $result = $controller->siteInfo(new Request(['percent_of_instances_threshold' => '30']));
     $this->assertEqual($result->getStatusCode(), 200);
-    $json_result_percent_of_instances_threshold_0 = json_decode($result->getContent(), TRUE);
-    $this->assertEqual($json_result_percent_of_instances_threshold_0['data']['bundle'], 'type_one');
-    $this->assertArrayHasKey('paragraphs', $json_result_percent_of_instances_threshold_0['data']['required_fields']);
+    $json_result_percent_of_instances_threshold_30 = json_decode($result->getContent(), TRUE);
+    $this->assertEqual($json_result_percent_of_instances_threshold_30['data']['bundle'], 'type_one');
+    $this->assertArrayHasKey('paragraphs', $json_result_percent_of_instances_threshold_30['data']['required_fields']);
 
     // Test threshold for 100% filled fields. (rule = count, index = 0)
     $result = $controller->siteInfo(new Request(['percent_of_instances_threshold' => '100']));
     $this->assertEqual($result->getStatusCode(), 200);
-    $json_result_percent_of_instances_threshold_0 = json_decode($result->getContent(), TRUE);
-    $this->assertEqual($json_result_percent_of_instances_threshold_0['data']['bundle'], 'type_one');
-    $this->assertArrayNotHasKey('paragraphs', $json_result_percent_of_instances_threshold_0['data']['required_fields']);
+    $json_result_percent_of_instances_threshold_100 = json_decode($result->getContent(), TRUE);
+    $this->assertEqual($json_result_percent_of_instances_threshold_100['data']['bundle'], 'type_one');
+    $this->assertArrayNotHasKey('paragraphs', $json_result_percent_of_instances_threshold_100['data']['required_fields']);
   }
 
 }
