@@ -78,7 +78,7 @@ class SiteInfoController extends ControllerBase {
    *   The threshold in percents for non-required fields.
    *
    * @return mixed
-   *   Returns all required fields for bundle.
+   *   Returns fields for bundle.
    */
   protected function getFieldWidgets($entity_type, $bundle, array $bundle_info, $threshold = 100.0) {
     $entity_form_display = EntityFormDisplay::load("{$entity_type}.{$bundle}.default");
@@ -150,7 +150,7 @@ class SiteInfoController extends ControllerBase {
    *   The list of bundles with fields for target entity type.
    *
    * @return array
-   *   Returns distribution of target entity bundles with required fields.
+   *   Returns distribution of target entity bundles with relevant fields.
    */
   protected function getTargetTypeBundleDistribution(array $target_type_histogram, $bundle_instances, array $target_entity_type_bundle_fields) {
     $total_target_instances = array_sum($target_type_histogram);
@@ -159,7 +159,7 @@ class SiteInfoController extends ControllerBase {
     $number_of_target_bundles = array_map(function ($number_of_target_bundles) use ($total_target_instances, $target_types_per_instance) {
       $value = $number_of_target_bundles / $total_target_instances * $target_types_per_instance;
 
-      return floor($value) != 0 ? floor($value) : ceil($value);
+      return floor($value) ?: 1;
     }, $target_type_histogram);
 
     // Fill target bundles for the field.
@@ -205,18 +205,18 @@ class SiteInfoController extends ControllerBase {
     }
 
     // Filter only fields in provided threshold.
-    foreach ($target_entity_type_bundle_fields as $target_bundle => &$target_bundle_info) {
+    foreach ($target_entity_type_bundle_fields as $target_bundle => $target_bundle_info) {
       $target_bundle_instances = $target_bundle_info['instances'];
 
       // Add widget information for fields.
       $entity_form_display = EntityFormDisplay::load("{$target_entity_type}.{$target_bundle}.default");
       if (!$entity_form_display) {
-        $target_bundle_info = [];
+        $target_entity_type_bundle_fields[$target_bundle] = [];
 
         continue;
       }
 
-      $target_bundle_info = array_filter(
+      $target_entity_type_bundle_fields[$target_bundle] = array_filter(
         $entity_form_display->getComponents(),
         function ($field_display_info, $field_name) use ($target_bundle_info, $target_bundle_instances, $threshold) {
           // Skip fields that are not displayed on form.
@@ -303,25 +303,28 @@ class SiteInfoController extends ControllerBase {
    * @throws \Drupal\Component\Plugin\Exception\PluginException
    */
   protected function getDataForEntityType($entity_type) {
-    $data = (array) $this->cache()
+    $cached_data = (array) $this->cache()
       ->get("thunder-performance-measurement:site-info:{$entity_type}");
-    if (!isset($data['data'])) {
-      $data = $this->samplerPluginManager->createInstance("reference_fields_target_bundles:{$entity_type}")->collect();
 
-      $bundles_by = [
+    if (isset($cached_data['data'])) {
+      return $cached_data['data'];
+    }
+
+    $data = $this->samplerPluginManager->createInstance("reference_fields_target_bundles:{$entity_type}")
+      ->collect();
+
+    $cached_data = [
+      'bundles' => $data,
+      'bundles_by' => [
         'count' => $this->getBundlesByCount($data),
         'number_of_fields' => $this->getBundlesByNumberOfFields($data),
-      ];
-      $data['bundles_by'] = $bundles_by;
+      ],
+    ];
 
-      $this->cache()
-        ->set("thunder-performance-measurement:site-info:{$entity_type}", $data);
-    }
-    else {
-      $data = $data['data'];
-    }
+    $this->cache()
+      ->set("thunder-performance-measurement:site-info:{$entity_type}", $cached_data);
 
-    return $data;
+    return $cached_data;
   }
 
   /**
@@ -347,6 +350,9 @@ class SiteInfoController extends ControllerBase {
   public function siteInfo(Request $request) {
     $rule = $request->query->get('rule', 'count');
     $index = (int) $request->query->get('index', '0');
+
+    // TODO: set default value to 100 when we start using
+    // TODO: percent_of_instances_threshold in tests.
     $percent_of_instances_threshold = (float) $request->query->get('percent_of_instances_threshold', '100.1');
 
     // Validate request params.
@@ -376,11 +382,13 @@ class SiteInfoController extends ControllerBase {
     }
 
     $bundle_name = $bundles_by_rule[$index];
-    $required_fields = $this->getFieldWidgets('node', $bundle_name, $data[$bundle_name], $percent_of_instances_threshold);
+    $field_widgets = $this->getFieldWidgets('node', $bundle_name, $data['bundles'][$bundle_name], $percent_of_instances_threshold);
     return new JsonResponse([
       'data' => [
         'bundle' => $bundle_name,
-        'required_fields' => $required_fields,
+        // TODO: remove required_fields when we start using new key in tests.
+        'required_fields' => $field_widgets,
+        'fields' => $field_widgets,
       ],
     ]);
   }

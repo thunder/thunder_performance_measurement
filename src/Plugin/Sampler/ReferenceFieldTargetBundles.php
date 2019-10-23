@@ -50,11 +50,11 @@ class ReferenceFieldTargetBundles extends Bundle {
 
     $entityTypeId = $this->entityTypeId();
 
-    foreach ($this->collectedData as $bundle => &$bundle_info) {
+    foreach ($this->collectedData as $bundle => $bundle_info) {
       /** @var \Drupal\Core\Field\FieldDefinitionInterface $fieldDefinition */
-      foreach ($bundle_info['fields'] as $fieldName => &$fieldData) {
+      foreach ($bundle_info['fields'] as $fieldName => $fieldData) {
         if ($fieldData['type'] == 'entity_reference_revisions' || $fieldData['type'] == 'entity_reference') {
-          $fieldData['target_type_histogram'] = $this->getReferenceFieldTargetBundlesHistogram(
+          $this->collectedData[$bundle]['fields'][$fieldName]['target_type_histogram'] = $this->getReferenceFieldTargetBundlesHistogram(
             $entityTypeId,
             $bundle,
             $fieldName,
