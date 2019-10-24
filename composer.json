@@ -27,5 +27,9 @@
     ],
     "require": {
         "thunder/sampler": "dev-master"
+    },
+    "require-dev": {
+        "drupal/entity_reference_revisions": "^1.6",
+        "drupal/paragraphs": "^1.9"
     }
 }

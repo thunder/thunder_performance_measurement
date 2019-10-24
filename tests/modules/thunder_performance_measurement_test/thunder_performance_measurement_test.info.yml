@@ -1,0 +1,8 @@
+name: 'Thunder performance measurement test module'
+type: module
+description: 'Imports configuration for thunder performance measurement tests.'
+core: 8.x
+
+dependencies:
+  - drupal:node
+  - paragraphs:paragraphs

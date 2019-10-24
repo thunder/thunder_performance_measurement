@@ -1,0 +1,37 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.paragraphs
+    - node.type.type_one
+    - paragraphs.paragraphs_type.one
+    - paragraphs.paragraphs_type.three
+    - paragraphs.paragraphs_type.two
+  module:
+    - entity_reference_revisions
+id: node.type_one.paragraphs
+field_name: paragraphs
+entity_type: node
+bundle: type_one
+label: 'Paragraphs'
+description: 'Paragraphs'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:paragraph'
+  handler_settings:
+    negate: 0
+    target_bundles:
+      one: one
+      two: two
+      three: three
+    target_bundles_drag_drop:
+      one:
+        enabled: true
+        weight: 1
+      two:
+        enabled: true
+        weight: 1
+field_type: entity_reference_revisions

@@ -1,0 +1,26 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.node_references
+    - node.type.type_one
+id: node.type_one.node_references
+field_name: node_references
+entity_type: node
+bundle: type_one
+label: 'Field with node reference'
+description: 'Field with node reference'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:node'
+  handler_settings:
+    target_bundles:
+      type_one: type_one
+    sort:
+      field: _none
+    auto_create: false
+    auto_create_bundle: article
+field_type: entity_reference
