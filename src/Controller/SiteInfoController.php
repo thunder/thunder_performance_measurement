@@ -18,6 +18,13 @@ use Symfony\Component\HttpFoundation\Request;
 class SiteInfoController extends ControllerBase {
 
   /**
+   * Maximum supported nesting depth.
+   *
+   * @var int
+   */
+  protected static $maxNestingDepth = 1;
+
+  /**
    * The sampler plugin manager.
    *
    * @var \Drupal\sampler\SamplerPluginManager
@@ -43,7 +50,7 @@ class SiteInfoController extends ControllerBase {
    *
    * @var array
    */
-  protected $nestingDepth = [];
+  protected $nestingDepth = 0;
 
   /**
    * Constructs a new SiteInfoController object.
@@ -138,12 +145,11 @@ class SiteInfoController extends ControllerBase {
       // Add target type distribution.
       if ($field_info['type'] == 'entity_reference_revisions' || $field_info['type'] == 'entity_reference') {
         // Accept only first level of nesting.
-        if (!empty($this->nestingDepth)) {
+        if ($this->nestingDepth >= static::$maxNestingDepth) {
           continue;
         }
 
-        $nestingDepthKey = "{$entity_type}{$bundle}{$field_name}";
-        $this->nestingDepth[$nestingDepthKey] = TRUE;
+        $this->nestingDepth += 1;
 
         $fields[$field_name]['target_type_distribution'] = $this->getTargetTypeBundleDistribution(
           $field_info['target_type_histogram'],
@@ -151,7 +157,7 @@ class SiteInfoController extends ControllerBase {
           $this->getTargetEntityFieldWidgets($field_info['target_type'], $threshold)
         );
 
-        unset($this->nestingDepth[$nestingDepthKey]);
+        $this->nestingDepth -= 1;
       }
     }
 
