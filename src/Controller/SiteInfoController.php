@@ -18,6 +18,13 @@ use Symfony\Component\HttpFoundation\Request;
 class SiteInfoController extends ControllerBase {
 
   /**
+   * Maximum supported nesting depth.
+   *
+   * @var int
+   */
+  protected static $maxNestingDepth = 1;
+
+  /**
    * The sampler plugin manager.
    *
    * @var \Drupal\sampler\SamplerPluginManager
@@ -37,6 +44,13 @@ class SiteInfoController extends ControllerBase {
    * @var \Drupal\Core\Entity\EntityFieldManagerInterface
    */
   protected $entityFieldManager;
+
+  /**
+   * Keeps information about nesting depth for resolved entity references.
+   *
+   * @var int
+   */
+  protected $nestingDepth = 0;
 
   /**
    * Constructs a new SiteInfoController object.
@@ -79,6 +93,8 @@ class SiteInfoController extends ControllerBase {
    *
    * @return mixed
    *   Returns fields for bundle.
+   *
+   * @throws \Drupal\Component\Plugin\Exception\PluginException
    */
   protected function getFieldWidgets($entity_type, $bundle, array $bundle_info, $threshold = 100.0) {
     $entity_form_display = EntityFormDisplay::load("{$entity_type}.{$bundle}.default");
@@ -128,11 +144,20 @@ class SiteInfoController extends ControllerBase {
 
       // Add target type distribution.
       if ($field_info['type'] == 'entity_reference_revisions' || $field_info['type'] == 'entity_reference') {
+        // Accept only first level of nesting.
+        if ($this->nestingDepth >= static::$maxNestingDepth) {
+          continue;
+        }
+
+        $this->nestingDepth += 1;
+
         $fields[$field_name]['target_type_distribution'] = $this->getTargetTypeBundleDistribution(
           $field_info['target_type_histogram'],
           $bundle_instances,
           $this->getTargetEntityFieldWidgets($field_info['target_type'], $threshold)
         );
+
+        $this->nestingDepth -= 1;
       }
     }
 
@@ -188,11 +213,15 @@ class SiteInfoController extends ControllerBase {
    *   The target entity type.
    * @param float $threshold
    *   The threshold limit.
+   * @param string $form_mode
+   *   The form display mode.
    *
    * @return mixed
    *   Returns bundles with fields for target entity type.
+   *
+   * @throws \Drupal\Component\Plugin\Exception\PluginException
    */
-  protected function getTargetEntityFieldWidgets($target_entity_type, $threshold) {
+  protected function getTargetEntityFieldWidgets($target_entity_type, $threshold, $form_mode = 'default') {
     try {
       // Get fields for target bundles.
       $target_entity_type_bundle_fields = $this->samplerPluginManager
@@ -206,41 +235,50 @@ class SiteInfoController extends ControllerBase {
 
     // Filter only fields in provided threshold.
     foreach ($target_entity_type_bundle_fields as $target_bundle => $target_bundle_info) {
-      $target_bundle_instances = $target_bundle_info['instances'];
+      $target_entity_type_bundle_fields[$target_bundle] = [];
 
       // Add widget information for fields.
-      $entity_form_display = EntityFormDisplay::load("{$target_entity_type}.{$target_bundle}.default");
+      $entity_form_display = EntityFormDisplay::load("{$target_entity_type}.{$target_bundle}.{$form_mode}");
       if (!$entity_form_display) {
-        $target_entity_type_bundle_fields[$target_bundle] = [];
-
         continue;
       }
 
-      $target_entity_type_bundle_fields[$target_bundle] = array_filter(
-        $entity_form_display->getComponents(),
-        function ($field_display_info, $field_name) use ($target_bundle_info, $target_bundle_instances, $threshold) {
-          // Skip fields that are not displayed on form.
-          if (!isset($field_display_info['region']) || $field_display_info['region'] !== 'content') {
-            return FALSE;
+      $target_bundle_instances = $target_bundle_info['instances'];
+      foreach ($entity_form_display->getComponents() as $field_name => $field_display_info) {
+        // Skip fields that are not displayed on form.
+        if (!isset($field_display_info['region']) || $field_display_info['region'] !== 'content') {
+          continue;
+        }
+
+        // Ensure that fields defined in form display exists in bundle fields.
+        if (!isset($target_bundle_info['fields'][$field_name])) {
+          continue;
+        }
+
+        $field_info = $target_bundle_info['fields'][$field_name];
+
+        // Use field if number of instances is 0, otherwise check if field
+        // usage is below threshold. This calculates threshold for all
+        // instances of target entity type.
+        if ($field_info['required'] || ($target_bundle_instances > 0 && (array_sum($field_info['histogram']) / $target_bundle_instances * 100) >= $threshold)) {
+          $target_entity_type_bundle_fields[$target_bundle][$field_name] = $field_display_info;
+        }
+
+        // We are handling only first level of depth.
+        if ($field_display_info['type'] == 'inline_entity_form_simple' && $field_info['type'] == 'entity_reference') {
+          // Skip fields with no or more then one target bundle.
+          if (count($field_info['target_bundles']) !== 1) {
+            continue;
           }
 
-          // Ensure that fields defined in form display exists in bundle fields.
-          if (!isset($target_bundle_info['fields'][$field_name])) {
-            return FALSE;
+          $target_type_sampler_plugin_data = $this->getDataForEntityType($field_info['target_type']);
+          if (!isset($target_type_sampler_plugin_data['bundles'][$field_info['target_bundles'][0]])) {
+            continue;
           }
 
-          $field_info = $target_bundle_info['fields'][$field_name];
-          if ($field_info['required']) {
-            return TRUE;
-          }
-
-          // Use field if number of instances is 0, otherwise check if field
-          // usage is below threshold. This calculates threshold for all
-          // instances of target entity type.
-          return $target_bundle_instances == 0 || (array_sum($field_info['histogram']) / $target_bundle_instances * 100) >= $threshold;
-        },
-        ARRAY_FILTER_USE_BOTH
-      );
+          $target_entity_type_bundle_fields[$target_bundle][$field_name]['inline_entity_form'] = $this->getFieldWidgets($field_info['target_type'], $field_info['target_bundles'][0], $target_type_sampler_plugin_data['bundles'][$field_info['target_bundles'][0]], $threshold);
+        }
+      }
     }
 
     return $target_entity_type_bundle_fields;
