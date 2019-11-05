@@ -46,9 +46,9 @@ class SiteInfoController extends ControllerBase {
   protected $entityFieldManager;
 
   /**
-   * Keeps information about nested resolved references.
+   * Keeps information about nesting depth for resolved entity references.
    *
-   * @var array
+   * @var int
    */
   protected $nestingDepth = 0;
 
