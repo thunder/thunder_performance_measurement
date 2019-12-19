@@ -207,6 +207,40 @@ class SiteInfoController extends ControllerBase {
   }
 
   /**
+   * Get collected sampler bundles for entity type.
+   *
+   * @param string $entity_type
+   *   The entity type.
+   *
+   * @return array
+   *   The sampler data.
+   */
+  protected function getSamplerBundles($entity_type) {
+    $cached_data = (array) $this->cache()
+      ->get("thunder-performance-measurement:sampler-bundles:{$entity_type}");
+
+    if (isset($cached_data['data'])) {
+      return $cached_data['data'];
+    }
+
+    $cached_data = [];
+    try {
+      // Get fields for target bundles.
+      $cached_data = $this->samplerPluginManager
+        ->createInstance("bundle:{$entity_type}")
+        ->collect();
+    }
+    catch (PluginException $e) {
+      // In case plugin doesn't exist we will use empty array.
+    }
+
+    $this->cache()
+      ->set("thunder-performance-measurement:sampler-bundles:{$entity_type}", $cached_data);
+
+    return $cached_data;
+  }
+
+  /**
    * Get target entity type field widgets.
    *
    * @param string $target_entity_type
@@ -222,16 +256,7 @@ class SiteInfoController extends ControllerBase {
    * @throws \Drupal\Component\Plugin\Exception\PluginException
    */
   protected function getTargetEntityFieldWidgets($target_entity_type, $threshold, $form_mode = 'default') {
-    try {
-      // Get fields for target bundles.
-      $target_entity_type_bundle_fields = $this->samplerPluginManager
-        ->createInstance("bundle:{$target_entity_type}")
-        ->collect();
-    }
-    catch (PluginException $e) {
-      // No fields will be used when target entity type plugin does not exist.
-      return [];
-    }
+    $target_entity_type_bundle_fields = $this->getSamplerBundles($target_entity_type);
 
     // Filter only fields in provided threshold.
     foreach ($target_entity_type_bundle_fields as $target_bundle => $target_bundle_info) {
