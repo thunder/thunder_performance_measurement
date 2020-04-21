@@ -21,8 +21,16 @@ env:
   global:
     - PATH="$PATH:$HOME/.composer/vendor/bin"
 
+matrix:
+  include:
+    - env: DRUPAL_TESTING_DRUPAL_VERSION=~9.0.0
+    - env: DRUPAL_TESTING_DRUPAL_VERSION=~8.8.0
+
 before_install:
-  - composer global require thunder/travis
+  - composer global require thunder/drupal-testing
 
 script:
   - test-drupal-project
+
+notifications:
+  email: false
